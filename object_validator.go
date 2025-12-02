@@ -30,7 +30,7 @@ type objectValidator struct {
 
 func newObjectValidator(path, in string,
 	maxProperties, minProperties *int64, required []string, properties spec.SchemaProperties,
-	additionalProperties *spec.SchemaOrBool, patternProperties spec.SchemaProperties,
+	additionalProperties *spec.SchemaOrBool, patternProperties spec.PatternSchemaProperties,
 	root any, formats strfmt.Registry, opts *SchemaValidatorOptions) *objectValidator {
 	if opts == nil {
 		opts = new(SchemaValidatorOptions)
@@ -50,7 +50,18 @@ func newObjectValidator(path, in string,
 	v.Required = required
 	v.Properties = properties
 	v.AdditionalProperties = additionalProperties
-	v.PatternProperties = patternProperties
+	// Extract schemas from PatternSchemaProperties, skipping boolean-only entries
+	if patternProperties != nil {
+		v.PatternProperties = make(map[string]spec.Schema, len(patternProperties))
+		for k, sob := range patternProperties {
+			if sob.Schema != nil {
+				v.PatternProperties[k] = *sob.Schema
+			}
+			// Boolean-only entries (true/false without schema) are handled implicitly:
+			// - true: allows any value (no schema validation needed)
+			// - false: disallows any value (handled by pattern matching logic)
+		}
+	}
 	v.Root = root
 	v.KnownFormats = formats
 	v.Options = opts

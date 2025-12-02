@@ -21,7 +21,7 @@ import (
 	"github.com/go-openapi/swag/jsonutils"
 )
 
-// Spec validates an OpenAPI 2.0 specification document.
+// Spec validates an OpenAPI 3.x specification document.
 //
 // Returns an error flattening in a single standard error, all validation messages.
 //
@@ -43,9 +43,9 @@ func Spec(doc *loads.Document, formats strfmt.Registry) error {
 	return nil
 }
 
-// SpecValidator validates a swagger 2.0 spec
+// SpecValidator validates an OpenAPI 3.x spec
 type SpecValidator struct {
-	schema        *spec.Schema // swagger 2.0 schema
+	schema        *spec.Schema // OpenAPI 3.x schema
 	spec          *loads.Document
 	analyzer      *analysis.Spec
 	expanded      *loads.Document
@@ -54,7 +54,12 @@ type SpecValidator struct {
 	schemaOptions *SchemaValidatorOptions
 }
 
-// NewSpecValidator creates a new swagger spec validator instance
+// isSwagger20 returns true if the spec is Swagger 2.0 format
+func (s *SpecValidator) isSwagger20() bool {
+	return s.spec.Spec().Swagger == "2.0"
+}
+
+// NewSpecValidator creates a new OpenAPI spec validator instance
 func NewSpecValidator(schema *spec.Schema, formats strfmt.Registry) *SpecValidator {
 	// schema options that apply to all called validators
 	schemaOptions := new(SchemaValidatorOptions)
@@ -219,8 +224,12 @@ func (s *SpecValidator) validateDuplicatePropertyNames() *Result {
 			continue
 		}
 
-		knownanc := map[string]struct{}{
-			"#/definitions/" + k: {},
+		// Use appropriate path prefix based on spec version
+		knownanc := make(map[string]struct{})
+		if s.isSwagger20() {
+			knownanc["#/definitions/"+k] = struct{}{}
+		} else {
+			knownanc["#/components/schemas/"+k] = struct{}{}
 		}
 
 		ancs, rec := s.validateCircularAncestry(k, sch, knownanc)
@@ -354,12 +363,20 @@ func (s *SpecValidator) validateItems() *Result {
 	for method, pi := range s.analyzer.Operations() {
 		for path, op := range pi {
 			for _, param := range paramHelp.safeExpandedParamsFor(path, method, op.ID, res, s) {
-
-				if param.TypeName() == arrayType && param.ItemsTypeName() == "" {
-					res.AddErrors(arrayInParamRequiresItemsMsg(param.Name, op.ID))
-					continue
-				}
-				if param.In != swaggerBody {
+				// In OpenAPI 3.x, parameters use schema for complex types
+				if param.Schema != nil {
+					// Use appropriate prefix based on parameter location
+					paramPrefix := fmt.Sprintf("param %q", param.Name)
+					if param.In == swaggerBody {
+						paramPrefix = fmt.Sprintf("body param %q", param.Name)
+					}
+					res.Merge(s.validateSchemaItems(*param.Schema, paramPrefix, op.ID))
+				} else {
+					// Simple parameter (backward compatibility with inline type definitions)
+					if param.TypeName() == arrayType && param.ItemsTypeName() == "" {
+						res.AddErrors(arrayInParamRequiresItemsMsg(param.Name, op.ID))
+						continue
+					}
 					if param.Items != nil {
 						items := param.Items
 						for items.TypeName() == arrayType {
@@ -370,10 +387,14 @@ func (s *SpecValidator) validateItems() *Result {
 							items = items.Items
 						}
 					}
-				} else {
-					// In: body
-					if param.Schema != nil {
-						res.Merge(s.validateSchemaItems(*param.Schema, fmt.Sprintf("body param %q", param.Name), op.ID))
+				}
+			}
+
+			// Validate requestBody in OpenAPI 3.x
+			if op.RequestBody != nil {
+				for mediaType, mt := range op.RequestBody.Content {
+					if mt.Schema != nil {
+						res.Merge(s.validateSchemaItems(*mt.Schema, fmt.Sprintf("requestBody %q", mediaType), op.ID))
 					}
 				}
 			}
@@ -397,6 +418,13 @@ func (s *SpecValidator) validateItems() *Result {
 						res.AddErrors(arrayInHeaderRequiresItemsMsg(hn, op.ID))
 					}
 				}
+				// OpenAPI 3.x: validate content media types
+				for mediaType, mt := range resp.Content {
+					if mt.Schema != nil {
+						res.Merge(s.validateSchemaItems(*mt.Schema, fmt.Sprintf("response %q", mediaType), op.ID))
+					}
+				}
+				// Backward compatibility: also check deprecated Schema field
 				if resp.Schema != nil {
 					res.Merge(s.validateSchemaItems(*resp.Schema, "response body", op.ID))
 				}
@@ -474,9 +502,14 @@ func (s *SpecValidator) validateReferencedParameters() *Result {
 		return nil
 	}
 
+	// Use appropriate path prefix based on spec version
 	expected := make(map[string]struct{})
 	for k := range params {
-		expected["#/parameters/"+jsonpointer.Escape(k)] = struct{}{}
+		if s.isSwagger20() {
+			expected["#/parameters/"+jsonpointer.Escape(k)] = struct{}{}
+		} else {
+			expected["#/components/parameters/"+jsonpointer.Escape(k)] = struct{}{}
+		}
 	}
 	for _, k := range s.analyzer.AllParameterReferences() {
 		delete(expected, k)
@@ -499,9 +532,14 @@ func (s *SpecValidator) validateReferencedResponses() *Result {
 		return nil
 	}
 
+	// Use appropriate path prefix based on spec version
 	expected := make(map[string]struct{})
 	for k := range responses {
-		expected["#/responses/"+jsonpointer.Escape(k)] = struct{}{}
+		if s.isSwagger20() {
+			expected["#/responses/"+jsonpointer.Escape(k)] = struct{}{}
+		} else {
+			expected["#/components/responses/"+jsonpointer.Escape(k)] = struct{}{}
+		}
 	}
 	for _, k := range s.analyzer.AllResponseReferences() {
 		delete(expected, k)
@@ -524,9 +562,14 @@ func (s *SpecValidator) validateReferencedDefinitions() *Result {
 		return nil
 	}
 
+	// Use appropriate path prefix based on spec version
 	expected := make(map[string]struct{})
 	for k := range defs {
-		expected["#/definitions/"+jsonpointer.Escape(k)] = struct{}{}
+		if s.isSwagger20() {
+			expected["#/definitions/"+jsonpointer.Escape(k)] = struct{}{}
+		} else {
+			expected["#/components/schemas/"+jsonpointer.Escape(k)] = struct{}{}
+		}
 	}
 	for _, k := range s.analyzer.AllDefinitionReferences() {
 		delete(expected, k)
@@ -584,8 +627,8 @@ func (s *SpecValidator) validateRequiredProperties(path, in string, v *spec.Sche
 			res.AddErrors(invalidPatternMsg(pp, in))
 		} else if re.MatchString(path) {
 			patternMatch = true
-			if !propertyMatch {
-				isReadOnly = pv.ReadOnly
+			if !propertyMatch && pv.Schema != nil {
+				isReadOnly = pv.Schema.ReadOnly
 			}
 		}
 	}
@@ -625,11 +668,10 @@ func (s *SpecValidator) validateParameters() *Result {
 	//   e.g. GET:/petstore/{id}, GET:/petstore/{pet}, GET:/petstore are
 	//   considered duplicate paths, if StrictPathParamUniqueness is enabled.
 	// - each parameter should have a unique `name` and `type` combination
-	// - each operation should have only 1 parameter of type body
-	// - there must be at most 1 parameter in body
 	// - parameters with pattern property must specify valid patterns
 	// - $ref in parameters must resolve
 	// - path param must be required
+	// NOTE: In OpenAPI 3.x, body and formData parameters are replaced by requestBody
 	res := pools.poolOfResults.BorrowResult()
 	rexGarbledPathSegment := mustCompileRegexp(`.*[{}\s]+.*`)
 	for method, pi := range s.expandedAnalyzer().Operations() {
@@ -661,8 +703,8 @@ func (s *SpecValidator) validateParameters() *Result {
 				}
 			}
 
-			var bodyParams []string
 			var paramNames []string
+			var bodyParams []string
 			var hasForm, hasBody bool
 
 			// Check parameters names uniqueness for operation
@@ -670,9 +712,13 @@ func (s *SpecValidator) validateParameters() *Result {
 			res.Merge(s.checkUniqueParams(path, method, op))
 
 			// pick the root schema from the swagger specification which describes a parameter
+			// Check both Definitions (Swagger 2.0) and Defs (JSON Schema 2020-12/OpenAPI 3.x)
 			origSchema, ok := s.schema.Definitions["parameter"]
 			if !ok {
-				panic("unexpected swagger schema: missing #/definitions/parameter")
+				origSchema, ok = s.schema.Defs["parameter"]
+			}
+			if !ok {
+				panic(fmt.Sprintf("unexpected swagger schema: missing #/definitions/parameter or #/$defs/parameter (Definitions len=%d, Defs len=%d)", len(s.schema.Definitions), len(s.schema.Defs)))
 			}
 			// clone it once to avoid expanding a global schema (e.g. swagger spec)
 			paramSchema, err := deepCloneSchema(origSchema)
@@ -697,12 +743,6 @@ func (s *SpecValidator) validateParameters() *Result {
 					res.AddErrors(invalidPatternInParamMsg(op.ID, pr.Name, pr.Pattern))
 				}
 
-				// There must be at most one parameter in body: list them all
-				if pr.In == swaggerBody {
-					bodyParams = append(bodyParams, fmt.Sprintf("%q", pr.Name))
-					hasBody = true
-				}
-
 				if pr.In == "path" {
 					paramNames = append(paramNames, pr.Name)
 					// Path declared in path must have the required: true property
@@ -711,8 +751,15 @@ func (s *SpecValidator) validateParameters() *Result {
 					}
 				}
 
-				if pr.In == "formData" {
-					hasForm = true
+				// Swagger 2.0 specific: track body and formData parameters
+				if s.isSwagger20() {
+					if pr.In == swaggerBody {
+						bodyParams = append(bodyParams, fmt.Sprintf("%q", pr.Name))
+						hasBody = true
+					}
+					if pr.In == "formData" {
+						hasForm = true
+					}
 				}
 
 				if pr.Type != numberType && pr.Type != integerType &&
@@ -734,15 +781,17 @@ func (s *SpecValidator) validateParameters() *Result {
 				}
 			}
 
-			// In:formData and In:body are mutually exclusive
-			if hasBody && hasForm {
-				res.AddErrors(bothFormDataAndBodyMsg(op.ID))
-			}
-			// There must be at most one body param
-			// Accurately report situations when more than 1 body param is declared (possibly unnamed)
-			if len(bodyParams) > 1 {
-				sort.Strings(bodyParams)
-				res.AddErrors(multipleBodyParamMsg(op.ID, bodyParams))
+			// Swagger 2.0 specific: In:formData and In:body are mutually exclusive
+			if s.isSwagger20() {
+				if hasBody && hasForm {
+					res.AddErrors(bothFormDataAndBodyMsg(op.ID))
+				}
+				// There must be at most one body param
+				// Accurately report situations when more than 1 body param is declared (possibly unnamed)
+				if len(bodyParams) > 1 {
+					sort.Strings(bodyParams)
+					res.AddErrors(multipleBodyParamMsg(op.ID, bodyParams))
+				}
 			}
 
 			// Check uniqueness of parameters in path

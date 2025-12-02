@@ -11,7 +11,7 @@ import (
 )
 
 // defaultValidator validates default values in a spec.
-// According to Swagger spec, default values MUST validate their schema.
+// According to OpenAPI spec, default values MUST validate their schema.
 type defaultValidator struct {
 	SpecValidator  *SpecValidator
 	visitedSchemas map[string]struct{}
@@ -137,6 +137,22 @@ func (d *defaultValidator) validateDefaultValueValidAgainstSchema() *Result {
 				}
 			}
 
+			// Validate default values in requestBody (OpenAPI 3.x)
+			if op.RequestBody != nil {
+				for mediaType, mt := range op.RequestBody.Content {
+					if mt.Schema != nil {
+						d.resetVisited()
+						red := d.validateDefaultValueSchemaAgainstSchema(fmt.Sprintf("requestBody.%s", mediaType), "body", mt.Schema)
+						if red.HasErrorsOrWarnings() {
+							res.AddErrors(defaultValueDoesNotValidateMsg(mediaType, "requestBody"))
+							res.Merge(red)
+						} else if red.wantsRedeemOnMerge {
+							pools.poolOfResults.RedeemResult(red)
+						}
+					}
+				}
+			}
+
 			if op.Responses != nil {
 				if op.Responses.Default != nil {
 					// Same constraint on default Response
@@ -207,6 +223,20 @@ func (d *defaultValidator) validateDefaultInResponse(resp *spec.Response, respon
 			// Headers don't have schema
 		}
 	}
+	// OpenAPI 3.x: validate content media types
+	for mediaType, mt := range response.Content {
+		if mt.Schema != nil {
+			d.resetVisited()
+			red := d.validateDefaultValueSchemaAgainstSchema(fmt.Sprintf("%s.%s", responseCodeAsStr, mediaType), "response", mt.Schema)
+			if red.HasErrorsOrWarnings() {
+				res.AddErrors(defaultValueInDoesNotValidateMsg(operationID, responseName))
+				res.Merge(red)
+			} else if red.wantsRedeemOnMerge {
+				pools.poolOfResults.RedeemResult(red)
+			}
+		}
+	}
+	// Backward compatibility: also check deprecated Schema field
 	if response.Schema != nil {
 		// reset explored schemas to get depth-first recursive-proof exploration
 		d.resetVisited()
@@ -259,7 +289,9 @@ func (d *defaultValidator) validateDefaultValueSchemaAgainstSchema(path, in stri
 		res.Merge(d.validateDefaultValueSchemaAgainstSchema(path+"."+propName, in, &prop)) //#nosec
 	}
 	for propName, prop := range schema.PatternProperties {
-		res.Merge(d.validateDefaultValueSchemaAgainstSchema(path+"."+propName, in, &prop)) //#nosec
+		if prop.Schema != nil {
+			res.Merge(d.validateDefaultValueSchemaAgainstSchema(path+"."+propName, in, prop.Schema))
+		}
 	}
 	if schema.AdditionalProperties != nil && schema.AdditionalProperties.Schema != nil {
 		res.Merge(d.validateDefaultValueSchemaAgainstSchema(path+".additionalProperties", in, schema.AdditionalProperties.Schema))

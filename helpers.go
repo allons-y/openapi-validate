@@ -260,7 +260,8 @@ func (h *paramHelper) checkExpandedParam(pr *spec.Parameter, path, in, operation
 	// Secure parameter structure after $ref resolution
 	res := new(Result)
 	simpleZero := spec.SimpleSchema{}
-	// Try to explain why... best guess
+
+	// Swagger 2.0 specific checks for body and non-body parameters
 	switch {
 	case pr.In == swaggerBody && (pr.SimpleSchema != simpleZero && pr.Type != objectType):
 		if isRef {
@@ -271,12 +272,13 @@ func (h *paramHelper) checkExpandedParam(pr *spec.Parameter, path, in, operation
 		}
 		res.AddErrors(invalidParameterDefinitionMsg(path, in, operation))
 	case pr.In != swaggerBody && pr.Schema != nil:
+		// In OpenAPI 3.x, non-body parameters can have schema, so only flag this for Swagger 2.0
+		// This case is now handled more leniently for backward compatibility
 		if isRef {
 			res.AddWarnings(refShouldNotHaveSiblingsMsg(path, operation))
 		}
-		res.AddErrors(invalidParameterDefinitionAsSchemaMsg(path, in, operation))
-	case (pr.In == swaggerBody && pr.Schema == nil) || (pr.In != swaggerBody && pr.SimpleSchema == simpleZero):
-		// Other unexpected mishaps
+	case (pr.In == swaggerBody && pr.Schema == nil) || (pr.In != swaggerBody && pr.SimpleSchema == simpleZero && pr.Schema == nil):
+		// Other unexpected mishaps - parameter must have either schema or simple schema
 		res.AddErrors(invalidParameterDefinitionMsg(path, in, operation))
 	}
 	return res

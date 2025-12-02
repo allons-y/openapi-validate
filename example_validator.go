@@ -16,13 +16,15 @@ type exampleValidator struct {
 	schemaOptions  *SchemaValidatorOptions
 }
 
-// Validate validates the example values declared in the swagger spec
+// Validate validates the example values declared in the OpenAPI spec
 // Example values MUST conform to their schema.
 //
-// With Swagger 2.0, examples are supported in:
+// With OpenAPI 3.x, examples are supported in:
 //   - schemas
 //   - individual property
-//   - responses
+//   - responses (via content media types)
+//   - parameters
+//   - request bodies
 func (ex *exampleValidator) Validate() *Result {
 	errs := pools.poolOfResults.BorrowResult()
 
@@ -61,7 +63,7 @@ func (ex *exampleValidator) isVisited(path string) bool {
 
 func (ex *exampleValidator) validateExampleValueValidAgainstSchema() *Result {
 	// every example value that is specified must validate against the schema for that property
-	// in: schemas, properties, object, items
+	// in: schemas, properties, object, items, parameters, request bodies
 	// not in: headers, parameters without schema
 
 	res := pools.poolOfResults.BorrowResult()
@@ -72,17 +74,16 @@ func (ex *exampleValidator) validateExampleValueValidAgainstSchema() *Result {
 			// parameters
 			for _, param := range paramHelp.safeExpandedParamsFor(path, method, op.ID, res, s) {
 
-				// As of swagger 2.0, Examples are not supported in simple parameters
-				// However, it looks like it is supported by go-openapi
+				// In OpenAPI 3.x, examples are supported in parameters
 
 				// reset explored schemas to get depth-first recursive-proof exploration
 				ex.resetVisited()
 
 				// Check simple parameters first
 				// default values provided must validate against their inline definition (no explicit schema)
-				if param.Example != nil && param.Schema == nil {
+				if param.ParamProps.Example != nil && param.Schema == nil {
 					// check param default value is valid
-					red := newParamValidator(&param, s.KnownFormats, ex.schemaOptions).Validate(param.Example) //#nosec
+					red := newParamValidator(&param, s.KnownFormats, ex.schemaOptions).Validate(param.ParamProps.Example) //#nosec
 					if red.HasErrorsOrWarnings() {
 						res.AddWarnings(exampleValueDoesNotValidateMsg(param.Name, param.In))
 						res.MergeAsWarnings(red)
@@ -110,6 +111,32 @@ func (ex *exampleValidator) validateExampleValueValidAgainstSchema() *Result {
 						res.Merge(red)
 					} else if red.wantsRedeemOnMerge {
 						pools.poolOfResults.RedeemResult(red)
+					}
+				}
+			}
+
+			// Validate example values in requestBody (OpenAPI 3.x)
+			if op.RequestBody != nil {
+				for mediaType, mt := range op.RequestBody.Content {
+					if mt.Schema != nil {
+						ex.resetVisited()
+						red := ex.validateExampleValueSchemaAgainstSchema(fmt.Sprintf("requestBody.%s", mediaType), "body", mt.Schema)
+						if red.HasErrorsOrWarnings() {
+							res.AddWarnings(exampleValueDoesNotValidateMsg(mediaType, "requestBody"))
+							res.MergeAsWarnings(red)
+						} else if red.wantsRedeemOnMerge {
+							pools.poolOfResults.RedeemResult(red)
+						}
+					}
+					// Also validate the example field on the media type itself
+					if mt.Example != nil && mt.Schema != nil {
+						red := newSchemaValidator(mt.Schema, s.spec.Spec(), fmt.Sprintf("requestBody.%s.example", mediaType), s.KnownFormats, ex.schemaOptions).Validate(mt.Example)
+						if red.HasErrorsOrWarnings() {
+							res.AddWarnings(exampleValueDoesNotValidateMsg(mediaType, "requestBody"))
+							res.MergeAsWarnings(red)
+						} else if red.wantsRedeemOnMerge {
+							pools.poolOfResults.RedeemResult(red)
+						}
 					}
 				}
 			}
@@ -184,6 +211,31 @@ func (ex *exampleValidator) validateExampleInResponse(resp *spec.Response, respo
 			// Headers don't have schema
 		}
 	}
+	// OpenAPI 3.x: validate content media types
+	for mediaType, mt := range response.Content {
+		if mt.Schema != nil {
+			ex.resetVisited()
+			red := ex.validateExampleValueSchemaAgainstSchema(fmt.Sprintf("%s.%s", responseCodeAsStr, mediaType), "response", mt.Schema)
+			if red.HasErrorsOrWarnings() {
+				res.AddWarnings(exampleValueInDoesNotValidateMsg(operationID, responseName))
+				res.Merge(red)
+			} else if red.wantsRedeemOnMerge {
+				pools.poolOfResults.RedeemResult(red)
+			}
+		}
+		// Also validate the example field on the media type itself
+		if mt.Example != nil && mt.Schema != nil {
+			red := newSchemaValidator(mt.Schema, s.spec.Spec(), fmt.Sprintf("%s.%s.example", responseCodeAsStr, mediaType), s.KnownFormats, ex.schemaOptions).Validate(mt.Example)
+			if red.HasErrorsOrWarnings() {
+				res.AddWarnings(exampleValueInDoesNotValidateMsg(operationID, responseName))
+				res.MergeAsWarnings(red)
+			} else if red.wantsRedeemOnMerge {
+				pools.poolOfResults.RedeemResult(red)
+			}
+		}
+	}
+
+	// Backward compatibility: also check deprecated Schema field
 	if response.Schema != nil {
 		// reset explored schemas to get depth-first recursive-proof exploration
 		ex.resetVisited()
@@ -251,7 +303,9 @@ func (ex *exampleValidator) validateExampleValueSchemaAgainstSchema(path, in str
 		res.Merge(ex.validateExampleValueSchemaAgainstSchema(path+"."+propName, in, &prop)) //#nosec
 	}
 	for propName, prop := range schema.PatternProperties {
-		res.Merge(ex.validateExampleValueSchemaAgainstSchema(path+"."+propName, in, &prop)) //#nosec
+		if prop.Schema != nil {
+			res.Merge(ex.validateExampleValueSchemaAgainstSchema(path+"."+propName, in, prop.Schema))
+		}
 	}
 	if schema.AdditionalProperties != nil && schema.AdditionalProperties.Schema != nil {
 		res.Merge(ex.validateExampleValueSchemaAgainstSchema(path+".additionalProperties", in, schema.AdditionalProperties.Schema))

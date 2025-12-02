@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package validate provides methods to validate a swagger specification,
+Package validate provides methods to validate an OpenAPI specification,
 as well as tools to validate data against their schema.
 
-This package follows Swagger 2.0. specification (aka OpenAPI 2.0). Reference
-can be found here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md.
+This package supports OpenAPI 3.x specification. Reference
+can be found here: https://spec.openapis.org/oas/v3.1.0
 
 # Validating a specification
 
-Validates a spec document (from JSON or YAML) against the JSON schema for swagger,
+Validates a spec document (from JSON or YAML) against the JSON schema for OpenAPI,
 then checks a number of extra rules that can't be expressed in JSON schema.
 
 Entry points:
@@ -30,7 +30,6 @@ Reported as errors:
 	[x] each referenceable definition must have references
 	[x] each definition property listed in the required array must be defined in the properties of the model
 	[x] each parameter should have a unique `name` and `type` combination
-	[x] each operation should have only 1 parameter of type body
 	[x] each reference must point to a valid object
 	[x] every default value that is specified must validate against the schema for that property
 	[x] items property is required for all schemas/definitions of type `array`
@@ -55,7 +54,7 @@ The schema validation toolkit validates data against JSON-schema-draft 04 schema
 It is tested against the full json-schema-testing-suite (https://github.com/json-schema-org/JSON-Schema-Test-Suite),
 except for the optional part (bignum, ECMA regexp, ...).
 
-It supports the complete JSON-schema vocabulary, including keywords not supported by Swagger (e.g. additionalItems, ...)
+It supports the complete JSON-schema vocabulary, including keywords not supported by OpenAPI (e.g. additionalItems, ...)
 
 Entry points:
   - AgainstSchema()
@@ -63,7 +62,7 @@ Entry points:
 
 # Known limitations
 
-With the current version of this package, the following aspects of swagger are not yet supported:
+With the current version of this package, the following aspects of OpenAPI are not yet supported:
 
 	[ ] errors and warnings are not reported with key/line number in spec
 	[ ] default values and examples on responses only support application/json producer type

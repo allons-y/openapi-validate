@@ -21,6 +21,7 @@ const (
 	ArrayInHeaderRequiresItemsError = "header %q for %q is a collection without an element type (array requires items definition)"
 
 	// BothFormDataAndBodyError indicates that an operation specifies both a body and a formData parameter, which is forbidden
+	// NOTE: This is a Swagger 2.0 specific error - in OpenAPI 3.x, body and formData are replaced by requestBody
 	BothFormDataAndBodyError = "operation %q has both formData and body parameters. Only one such In: type may be used for a given operation"
 
 	// CannotResolveReferenceError when a $ref could not be resolved
@@ -101,6 +102,7 @@ const (
 	InvalidResponseDefinitionAsSchemaError = "invalid definition as Schema for response %s in %s"
 
 	// MultipleBodyParamError indicates that an operation specifies multiple parameter with in: body
+	// NOTE: This is a Swagger 2.0 specific error - in OpenAPI 3.x, body is replaced by requestBody
 	MultipleBodyParamError = "operation %q has more than 1 body param: %v"
 
 	// NonUniqueOperationIDError indicates that the same operationId has been specified several times
@@ -127,7 +129,7 @@ const (
 	// PathParamRequiredError ...
 	PathParamRequiredError = "in operation %q,path param %q must be declared as required"
 
-	// RefNotAllowedInHeaderError indicates a $ref was found in a header definition, which is not allowed by Swagger
+	// RefNotAllowedInHeaderError indicates a $ref was found in a header definition, which is not allowed by OpenAPI
 	RefNotAllowedInHeaderError = "IMPORTANT!in %q: $ref are not allowed in headers. In context for header %q%s"
 
 	// RequiredButNotDefinedError ...
