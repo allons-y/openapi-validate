@@ -18,7 +18,7 @@
 package post
 
 import (
-	"github.com/go-openapi/validate"
+	validate "github.com/allons-y/openapi-validate"
 )
 
 // Prune recursively removes all non-specified fields from the underlying data of the result.

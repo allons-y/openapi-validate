@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
+	spec "github.com/allons-y/openapi-spec"
 	"github.com/go-openapi/errors"
-	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	"github.com/go-openapi/swag/fileutils"
@@ -18,12 +18,19 @@ type typeValidator struct {
 	Path     string
 	In       string
 	Type     spec.StringOrArray
-	Nullable bool
+	Nullable *bool
 	Format   string
 	Options  *SchemaValidatorOptions
 }
 
-func newTypeValidator(path, in string, typ spec.StringOrArray, nullable bool, format string, opts *SchemaValidatorOptions) *typeValidator {
+func (t *typeValidator) isNullable() bool {
+	if t.Nullable != nil {
+		return *t.Nullable
+	}
+	return false
+}
+
+func newTypeValidator(path, in string, typ spec.StringOrArray, nullable *bool, format string, opts *SchemaValidatorOptions) *typeValidator {
 	if opts == nil {
 		opts = new(SchemaValidatorOptions)
 	}
@@ -71,7 +78,7 @@ func (t *typeValidator) Validate(data any) *Result {
 
 	if data == nil {
 		// nil or zero value for the passed structure require Type: null
-		if len(t.Type) > 0 && !t.Type.Contains(nullType) && !t.Nullable { // TODO: if a property is not required it also passes this
+		if len(t.Type) > 0 && !t.Type.Contains(nullType) && !t.isNullable() { // TODO: if a property is not required it also passes this
 			return errorHelp.sErr(errors.InvalidType(t.Path, t.In, strings.Join(t.Type, ","), nullType), t.Options.recycleResult)
 		}
 

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/allons-y/openapi-spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -105,24 +105,27 @@ func TestObjectValidatorApply(t *testing.T) {
 }
 
 func TestObjectValidatorPatternProperties(t *testing.T) {
-	patternWithValid := spec.SchemaProperties{
-		"valid": spec.Schema{
+	patternWithValid := spec.PatternSchemaProperties{
+		"valid": spec.SchemaOrBool{Schema: &spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"string"},
 			},
 		},
-		"#(.((garbled": spec.Schema{
+		},
+		"#(.((garbled": spec.SchemaOrBool{Schema: &spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"string"},
 			},
+		},
 		},
 	}
 
-	patternGarbled := spec.SchemaProperties{
-		"#(.((garbled": spec.Schema{
+	patternGarbled := spec.PatternSchemaProperties{
+		"#(.((garbled": spec.SchemaOrBool{Schema: &spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"string"},
 			},
+		},
 		},
 	}
 

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-openapi/loads"
-	"github.com/go-openapi/loads/fmts"
+	loads "github.com/allons-y/openapi-loads"
+	"github.com/allons-y/openapi-loads/fmts"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"

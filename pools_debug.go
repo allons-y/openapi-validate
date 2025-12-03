@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/allons-y/openapi-spec"
 )
 
 // This version of the pools is to be used for debugging and testing, with build tag "validatedebug".

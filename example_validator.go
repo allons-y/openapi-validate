@@ -6,7 +6,7 @@ package validate
 import (
 	"fmt"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/allons-y/openapi-spec"
 )
 
 // ExampleValidator validates example values defined in a spec

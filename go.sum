@@ -1,3 +1,9 @@
+github.com/allons-y/openapi-analysis v0.0.0-20251204071550-c411ed13b9c9 h1:MgdxmiE11KZBgLBIsgGva41D72+9oz2ThhzfyA/069c=
+github.com/allons-y/openapi-analysis v0.0.0-20251204071550-c411ed13b9c9/go.mod h1:17DsFANj+8Trpmz+dyUlwfZCu0BR4ZrGjR6dsQ1c0zs=
+github.com/allons-y/openapi-loads v0.0.0-20251204071725-cd3c2a61023c h1:zAMO9YMR+lU5jpNnv9PfK049rAc7zHqTu4xdedlhUOU=
+github.com/allons-y/openapi-loads v0.0.0-20251204071725-cd3c2a61023c/go.mod h1:fDfAl0EsclBP1fv7WYDP05Q7KVNuRYhkdLfxx9smlH0=
+github.com/allons-y/openapi-spec v0.0.0-20251204071355-9801a15ee2d2 h1:E5Ldr9oVQXaWf5zcUWaGxGm/TgcDz3a3TvFBL8b78Xo=
+github.com/allons-y/openapi-spec v0.0.0-20251204071355-9801a15ee2d2/go.mod h1:pu2mFL5Wqqg9nORrVArz/w/kCv40BNi95FryZCKHq3Y=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-openapi/errors v0.22.4 h1:oi2K9mHTOb5DPW2Zjdzs/NIvwi2N3fARKaTJLdNabaM=

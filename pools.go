@@ -8,7 +8,7 @@ package validate
 import (
 	"sync"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/allons-y/openapi-spec"
 )
 
 var pools allPools

@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/allons-y/openapi-spec"
 	"github.com/go-openapi/strfmt"
-	validate "github.com/go-openapi/validate"
+	validate validate "github.com/allons-y/openapi-validate"
 )
 
 var pruneFixturesPath = filepath.Join("..", "fixtures", "pruning")

@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-openapi/analysis"
-	"github.com/go-openapi/loads"
-	"github.com/go-openapi/loads/fmts"
-	"github.com/go-openapi/spec"
+	analysis "github.com/allons-y/openapi-analysis"
+	loads "github.com/allons-y/openapi-loads"
+	"github.com/allons-y/openapi-loads/fmts"
+	spec "github.com/allons-y/openapi-spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -369,14 +369,14 @@ func TestSpec_ValidateRequiredDefinitions(t *testing.T) {
 	assert.NotEmpty(t, res.Errors)
 
 	// pattern properties
-	def.PatternProperties = make(map[string]spec.Schema)
-	def.PatternProperties["ty.*"] = *spec.StringProperty()
+	def.PatternProperties = make(map[string]spec.SchemaOrBool)
+	def.PatternProperties["ty.*"] = spec.SchemaOrBool{Schema: spec.StringProperty()}
 	sw.Definitions["Tag"] = def
 	res = validator.validateRequiredDefinitions()
 	assert.Empty(t, res.Errors)
 
-	def.PatternProperties = make(map[string]spec.Schema)
-	def.PatternProperties["^ty.$"] = *spec.StringProperty()
+	def.PatternProperties = make(map[string]spec.SchemaOrBool)
+	def.PatternProperties["^ty.$"] = spec.SchemaOrBool{Schema: spec.StringProperty()}
 	sw.Definitions["Tag"] = def
 	res = validator.validateRequiredDefinitions()
 	assert.NotEmpty(t, res.Errors)

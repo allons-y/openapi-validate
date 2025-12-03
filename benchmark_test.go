@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-openapi/loads"
+	loads "github.com/allons-y/openapi-loads"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/testify/v2/require"
 )

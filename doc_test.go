@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-openapi/loads" // Spec loading
-	"github.com/go-openapi/spec"
-	"github.com/go-openapi/strfmt" // OpenAPI format extensions
+	loads "github.com/allons-y/openapi-loads" // Spec loading
+	spec "github.com/allons-y/openapi-spec"
+	validate "github.com/allons-y/openapi-validate" // This package
+	"github.com/go-openapi/strfmt"                  // OpenAPI format extensions
 	"github.com/go-openapi/testify/v2/require"
-	"github.com/go-openapi/validate" // This package
 )
 
 func ExampleSpec() {

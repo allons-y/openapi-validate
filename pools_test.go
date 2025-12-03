@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-openapi/loads"
+	loads "github.com/allons-y/openapi-loads"
+	validate "github.com/allons-y/openapi-validate"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/testify/v2/require"
-	"github.com/go-openapi/validate"
 )
 
 func Test_ParallelPool(t *testing.T) {

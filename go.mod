@@ -1,11 +1,11 @@
-module github.com/go-openapi/validate
+module github.com/allons-y/openapi-validate
 
 require (
-	github.com/go-openapi/analysis v0.24.1
+	github.com/allons-y/openapi-analysis v0.0.0-20251204071550-c411ed13b9c9
+	github.com/allons-y/openapi-loads v0.0.0-20251204071725-cd3c2a61023c
+	github.com/allons-y/openapi-spec v0.0.0-20251204071355-9801a15ee2d2
 	github.com/go-openapi/errors v0.22.4
 	github.com/go-openapi/jsonpointer v0.22.3
-	github.com/go-openapi/loads v0.23.2
-	github.com/go-openapi/spec v0.22.1
 	github.com/go-openapi/strfmt v0.25.0
 	github.com/go-openapi/swag/conv v0.25.4
 	github.com/go-openapi/swag/fileutils v0.25.4

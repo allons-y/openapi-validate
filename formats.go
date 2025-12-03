@@ -6,7 +6,7 @@ package validate
 import (
 	"reflect"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/allons-y/openapi-spec"
 	"github.com/go-openapi/strfmt"
 )
 

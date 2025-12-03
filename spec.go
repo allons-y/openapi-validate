@@ -12,11 +12,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-openapi/analysis"
+	analysis "github.com/allons-y/openapi-analysis"
+	loads "github.com/allons-y/openapi-loads"
+	spec "github.com/allons-y/openapi-spec"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/jsonpointer"
-	"github.com/go-openapi/loads"
-	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/jsonutils"
 )

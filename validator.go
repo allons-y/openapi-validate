@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"reflect"
 
+	spec "github.com/allons-y/openapi-spec"
 	"github.com/go-openapi/errors"
-	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 )
 
@@ -122,7 +122,7 @@ func (i *itemsValidator) typeValidator() valueValidator {
 		i.path,
 		i.in,
 		spec.StringOrArray([]string{i.items.Type}),
-		i.items.Nullable,
+		&i.items.Nullable,
 		i.items.Format,
 		i.Options,
 	)
@@ -326,7 +326,7 @@ func newHeaderValidator(name string, header *spec.Header, formats strfmt.Registr
 			name,
 			"header",
 			spec.StringOrArray([]string{header.Type}),
-			header.Nullable,
+			&header.Nullable,
 			header.Format,
 			p.Options,
 		),
@@ -517,7 +517,7 @@ func newParamValidator(param *spec.Parameter, formats strfmt.Registry, opts *Sch
 			param.Name,
 			param.In,
 			spec.StringOrArray([]string{param.Type}),
-			param.Nullable,
+			&param.Nullable,
 			param.Format,
 			p.Options,
 		),
